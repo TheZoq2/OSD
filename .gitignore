@@ -1,0 +1,8 @@
+*.hi
+*.o
+
+apio_build
+build
+output
+bin
+verilog
