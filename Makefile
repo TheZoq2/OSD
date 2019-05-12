@@ -44,7 +44,9 @@ build_hs: $(hs_targets)
 # Build HS files, touch a flag to indicate that the file is built
 verilog/%/built: %.hs clash/*.hs
 	@echo -e "[\033[0;34mclash\033[0m] Building $<"
-	@stack exec -- clash --verilog $< -i${hs_include_dir}
+	@stack exec -- clash --verilog $< -i${hs_include_dir} \
+		-fclash-inline-limit=100 \
+		-fmax-relevant-binds=10
 	@touch $@
 
 
@@ -82,6 +84,7 @@ upload: build
 	@./upload_until_done.sh ${APIO_BUILD_DIR}
 
 u: upload
+b: build
 
 time: build
 	@apio time -p ${APIO_BUILD_DIR}

@@ -5,10 +5,11 @@ import Clash.Prelude
 import qualified LineDrawer
 
 
-testLines ::LineDrawer.Lines Coordinate
+testLines :: LineDrawer.Lines 12
 testLines =
-    (  Just (LineDrawer.Line (100, 100) (200, 200))
-    :> Just (LineDrawer.Line (100, 200) (200, 100))
+    (  Just (LineDrawer.Line (100, 100) (200, 200) 0.5)
+    :> Just (LineDrawer.Line (100, 110) (200, 100) (1))
+    :> Just (LineDrawer.Line (100, 110) (200, 100) (-0.5))
     :> Nil
     )
     ++ repeat Nothing
@@ -136,9 +137,13 @@ horizontalLineGenerator step =
 
 -- Drawing functions
 
-drawLines :: LineDrawer.Lines Coordinate -> Coordinate -> Coordinate -> Output
+drawLines :: LineDrawer.Lines 12 -> Coordinate -> Coordinate -> Output
 drawLines lines x y =
-    if LineDrawer.pixelIsOnLines (x, y) lines then
+    let
+        xCoord = (fromInteger $ toInteger x) `shiftR` 1
+        yCoord = (fromInteger $ toInteger y) `shiftR` 1
+    in
+    if LineDrawer.pixelIsOnLines (xCoord, yCoord) lines then
         white
     else
         black
