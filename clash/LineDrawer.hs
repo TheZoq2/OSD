@@ -72,14 +72,14 @@ data Line n = Line
 
 -- A collection of lines that are checked in parallel. If less than the maximum
 -- amount of lines should be drawn, use `Nothing`
-type Lines n = Vec 10 (Maybe (Line n))
+type Lines n = Vec 31 (Maybe (Line n))
 
 
 
 -- Calculates the secondary axis coordinate of the specified line given
 -- the primary coordinate relative to the start of the line
 -- TODO: Remove Maybe
-lineY :: forall n. KnownNat n => Line n -> Signed n -> Maybe (Signed n)
+lineY :: forall n. KnownNat n => Line n -> Signed n -> Signed n
 lineY line xCoordRelative =
     let
         slopeEnlarged :: SFixed n 6
@@ -90,10 +90,7 @@ lineY line xCoordRelative =
 
         relativeY = (truncateFp (xCoordFixed * slopeEnlarged))
     in
-    if xCoordRelative < 0 then
-        Nothing
-    else
-        Just $ pointY (start line) + relativeY
+        pointY (start line) + relativeY
 
 
 -- Checks if the specified coordinate is on the specified line
@@ -107,15 +104,9 @@ pixelIsOnLine pixel line =
 
         expectedY = lineY line xRelative
 
-        valid = (pointX pixel <= pointX end')
+        valid = (pointX pixel >= pointX start') && (pointX pixel <= pointX end')
     in
-    case expectedY of
-        Just expectedY ->
-            let
-                distance = abs $ (pointY pixel) - expectedY
-            in
-                distance < 2 && valid
-        Nothing -> False
+        (abs $ (pointY pixel) - expectedY) < 2 && valid
 
 
 -- Check if the specified pixel is on any of the specified lines
