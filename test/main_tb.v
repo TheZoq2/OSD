@@ -1,6 +1,5 @@
 module main_tb();
     reg clk;
-    reg rst;
 
     reg __failed;
     
@@ -15,12 +14,9 @@ module main_tb();
     end
 
     initial begin
-        rst <= 1;
-        #4;
-        rst <= 0;
         #100000
         `END_TEST;
     end
 
-    top uut(.CLK(clk), .RST(rst));
+    top uut(.CLK(clk));
 endmodule
