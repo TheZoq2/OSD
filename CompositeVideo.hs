@@ -2,6 +2,18 @@ module CompositeVideo where
 
 import Clash.Prelude
 
+import qualified LineDrawer
+
+
+testLines ::LineDrawer.Lines Coordinate
+testLines =
+    (  Just (LineDrawer.Line (100, 100) (200, 200))
+    :> Just (LineDrawer.Line (100, 200) (200, 100))
+    :> Nil
+    )
+    ++ repeat Nothing
+
+
 
 -- Horizontal timings (Rely on 16MHz clock)
 syncTime = 78
@@ -24,19 +36,21 @@ postEqualisingCount = 5
 -- Voltages
 syncLevel = 6
 white = 31
+black = 8
 
 
 
 
 type Output = (Unsigned 5)
+type Coordinate = (Unsigned 11)
 
 
 -- TODO: Select appropriate word lengths
 data VStep
     -- The nth pre equalising pulse which has been active for k clocks
-    = PreEqualising(Unsigned 8) (Unsigned 12)
-    | FieldSync(Unsigned 8) (Unsigned 12)
-    | PostEqualising(Unsigned 8) (Unsigned 12)
+    = PreEqualising (Unsigned 8) (Unsigned 12)
+    | FieldSync (Unsigned 8) (Unsigned 12)
+    | PostEqualising (Unsigned 8) (Unsigned 12)
     | HalfEmptyFrame (Unsigned 12)
     | EmptyFrame (Unsigned 8) (Unsigned 12)
     | HalfFrame (Unsigned 12)
@@ -98,7 +112,7 @@ vsync evenField step =
 data HStep
     = Sync (Unsigned 8)
     | Blank (Unsigned 8)
-    | Frame (Unsigned 11)
+    | Frame Coordinate
     | PostFrame (Unsigned 8)
     | HDone
     deriving Show
@@ -118,7 +132,18 @@ horizontalLineGenerator step =
         HDone -> Sync 0
 
 
-stepPixel :: Unsigned 11 -> Int -> Output
+
+
+-- Drawing functions
+
+drawLines :: LineDrawer.Lines Coordinate -> Coordinate -> Coordinate -> Output
+drawLines lines x y =
+    if LineDrawer.pixelIsOnLines (x, y) lines then
+        white
+    else
+        black
+
+stepPixel :: Coordinate -> Coordinate -> Output
 stepPixel x y =
     if y == 300 || y == 301 || x == 300 || x == 301 then
         -- 2 + syncLevel + (truncateB $ shiftR x 6)
@@ -131,7 +156,15 @@ stepPixel x y =
     -- else
     --     white
 
-output :: (Unsigned 11 -> Int -> Output) -> HStep -> Int ->  Output
+
+
+
+
+
+
+-- Putting things together
+
+output :: (Coordinate -> Coordinate -> Output) -> HStep -> Coordinate ->  Output
 output pixelFunction step line =
     case step of
         Sync _ -> 0
@@ -161,7 +194,7 @@ vsyncOutput step =
 
 data FullFrameStep
     = VerticalSync Bool VStep
-    | Drawing Int HStep
+    | Drawing Coordinate HStep
     deriving(Show)
 
 
@@ -196,7 +229,7 @@ fullOutput step =
         VerticalSync _ step ->
             vsyncOutput step
         Drawing line step ->
-            output stepPixel step line
+            output (drawLines testLines) step line
 
 
 behaviour :: FullFrameStep -> () -> (FullFrameStep, (Output, Bit))

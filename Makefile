@@ -10,6 +10,8 @@ IVERILOG_FLAGS=-g2012
 # All haskell files in the project
 hs_files := $(wildcard *.hs)
 hs_targets := $(patsubst %.hs, verilog/%/built, $(wildcard *.hs))
+hs_include_dir := clash
+hs_lincude_files := $(wildcard clash/*.hs)
 
 # All test files in the project
 test_files := $(wildcard test/*.v)
@@ -40,9 +42,9 @@ build_hs: $(hs_targets)
 
 
 # Build HS files, touch a flag to indicate that the file is built
-verilog/%/built: %.hs
+verilog/%/built: %.hs clash/*.hs
 	@echo -e "[\033[0;34mclash\033[0m] Building $<"
-	@stack exec -- clash --verilog $<
+	@stack exec -- clash --verilog $< -i${hs_include_dir}
 	@touch $@
 
 
