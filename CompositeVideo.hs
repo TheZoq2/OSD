@@ -7,9 +7,10 @@ import qualified LineDrawer
 
 testLines :: LineDrawer.Lines 12
 testLines =
-    (  Just (LineDrawer.Line (100, 100) (200, 200) 0.5)
-    :> Just (LineDrawer.Line (100, 110) (200, 100) (1))
-    :> Just (LineDrawer.Line (100, 110) (200, 100) (-0.5))
+    (  Just (LineDrawer.Line (100, 100) (200, 200) 0.5 LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (100, 110) (200, 100) (0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (100, 110) (200, 100) (-0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (250, 120) (350, 100) (-0.9) LineDrawer.XAxis)
     :> Nil
     )
     ++ repeat Nothing
@@ -140,8 +141,8 @@ horizontalLineGenerator step =
 drawLines :: LineDrawer.Lines 12 -> Coordinate -> Coordinate -> Output
 drawLines lines x y =
     let
-        xCoord = (fromInteger $ toInteger x) `shiftR` 1
-        yCoord = (fromInteger $ toInteger y) `shiftR` 1
+        xCoord = (fromInteger $ toInteger x) `shiftR` 0
+        yCoord = (fromInteger $ toInteger y) `shiftR` 0
     in
     if LineDrawer.pixelIsOnLines (xCoord, yCoord) lines then
         white

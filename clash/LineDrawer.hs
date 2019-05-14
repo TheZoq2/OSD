@@ -68,6 +68,7 @@ data Line n = Line
     , end :: Point n
     -- The slope of the line as described above. -1 <= slope <= 1
     , slope :: Slope
+    , axis :: Axis
     }
 
 -- A collection of lines that are checked in parallel. If less than the maximum
@@ -78,7 +79,6 @@ type Lines n = Vec 31 (Maybe (Line n))
 
 -- Calculates the secondary axis coordinate of the specified line given
 -- the primary coordinate relative to the start of the line
--- TODO: Remove Maybe
 lineY :: forall n. KnownNat n => Line n -> Signed n -> Signed n
 lineY line xCoordRelative =
     let
@@ -93,20 +93,31 @@ lineY line xCoordRelative =
         pointY (start line) + relativeY
 
 
+maybeSwapAxes :: (Signed n, Signed n) -> Line n -> (Signed n, Signed n)
+maybeSwapAxes (x, y) line =
+    case axis line of
+        XAxis -> (x, y)
+        YAxis -> (y, x)
+
+
 -- Checks if the specified coordinate is on the specified line
-pixelIsOnLine :: forall n. KnownNat n => (Signed n, Signed n) ->  Line n -> Bool
+pixelIsOnLine :: forall n. KnownNat n => (Signed n, Signed n) -> Line n -> Bool
 pixelIsOnLine pixel line =
     let
+        pixel' = maybeSwapAxes pixel line
+        -- pixel' = pixel
+
         start' = start line
         end' = end line
 
-        xRelative = pointX pixel - pointX start'
+        xRelative = pointX pixel' - pointX start'
 
         expectedY = lineY line xRelative
 
-        valid = (pointX pixel >= pointX start') && (pointX pixel <= pointX end')
+        valid = (pointX pixel' >= pointX start') && (pointX pixel' <= pointX end')
     in
-        (abs $ (pointY pixel) - expectedY) < 2 && valid
+        (abs $ (pointY pixel') - expectedY) < 2 && valid
+
 
 
 -- Check if the specified pixel is on any of the specified lines
