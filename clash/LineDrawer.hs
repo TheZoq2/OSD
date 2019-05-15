@@ -66,7 +66,7 @@ data Line n = Line
     -- axis
     { start :: Point n
     -- The length of the line on the specified axis
-    , end :: Point n
+    , lengthAlongAxis :: Signed n
     -- The slope of the line as described above. -1 <= slope <= 1
     , slope :: Slope
     , axis :: Axis
@@ -94,38 +94,54 @@ lineY line xCoordRelative =
         pointY (start line) + relativeY
 
 
-maybeSwapAxes :: (Signed n, Signed n) -> Line n -> (Signed n, Signed n)
-maybeSwapAxes (x, y) line =
-    case axis line of
+data SwapedPoint n = SwapedPoint (Point n)
+
+maybeSwapAxes :: KnownNat n => Line n -> Point n -> SwapedPoint n
+maybeSwapAxes line (x, y) =
+    SwapedPoint $ case axis line of
         XAxis -> (x, y)
         YAxis -> (y, x)
 
 
--- Checks if the specified coordinate is on the specified line
-pixelIsOnLine :: forall n. KnownNat n => (Signed n, Signed n) -> Line n -> Bool
-pixelIsOnLine pixel line =
+calculateLineY :: KnownNat n => Line n -> SwapedPoint n -> Signed n
+calculateLineY line (SwapedPoint pixel) =
     let
-        pixel' = maybeSwapAxes pixel line
-        -- pixel' = pixel
-
         start' = start line
-        end' = end line
+        end' = pointX start' + lengthAlongAxis line
 
-        xRelative = pointX pixel' - pointX start'
+        xRelative = pointX pixel - pointX start'
 
-        expectedY = lineY line xRelative
-
-        valid = (pointX pixel' >= pointX start') && (pointX pixel' <= pointX end')
     in
-        (abs $ (pointY pixel') - expectedY) < 0 && valid
+        lineY line xRelative
+
+-- Checks if the specified coordinate is on the specified line
+pixelIsOnLine :: KnownNat n => SwapedPoint n -> Line n -> (Signed n) -> Bool
+pixelIsOnLine (SwapedPoint pixel) line expectedY =
+    let
+        start' = start line
+        end' = lengthAlongAxis line
+        valid = (pointX pixel >= pointX start') && (pointX pixel <= end')
+    in
+        (abs $ (pointY pixel) - expectedY) < 0 && valid
 
 
+
+
+-- pixelIsOnLinesD :: KnownNat n => Signal ()
 
 -- Check if the specified pixel is on any of the specified lines
-pixelIsOnLines :: KnownNat n  => (Signed n, Signed n) -> Lines n -> Bool
+pixelIsOnLines :: KnownNat n  => Point n -> Lines n -> Bool
 pixelIsOnLines pixel lines =
+    let
+        lineFunction line =
+            let
+                swaped = (maybeSwapAxes line pixel)
+                expectedY = calculateLineY line swaped
+            in
+                pixelIsOnLine swaped line expectedY
+    in
     fold (||)
-        $ fmap (maybe False (pixelIsOnLine pixel))
+        $ fmap (maybe False lineFunction)
         $ lines
 
 
@@ -135,10 +151,10 @@ pixelIsOnLines pixel lines =
 
 debugLines :: LineDrawer.Lines 10
 debugLines =
-    (  Just (LineDrawer.Line (10, 10) (30, 200) 0.5 LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (10, 14) (30, 100) (0.5) LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (10, 14) (30, 100) (-0.5) LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (25, 18) (50, 100) (-1.0) LineDrawer.XAxis)
+    (  Just (LineDrawer.Line (10, 10) 10 0.5 LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (10, 14) 10 (0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (10, 14) 10 (-0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (25, 18) 10 (-1.0) LineDrawer.XAxis)
     :> Nil
     )
     ++ repeat Nothing

@@ -7,10 +7,10 @@ import qualified LineDrawer
 
 testLines :: LineDrawer.Lines 12
 testLines =
-    (  Just (LineDrawer.Line (100, 100) (200, 200) 0.5 LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (100, 110) (200, 100) (0.5) LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (100, 110) (200, 100) (-0.5) LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (250, 120) (350, 100) (-0.9) LineDrawer.XAxis)
+    (  Just (LineDrawer.Line (100, 100) 100 0.5 LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (100, 110) 100 (0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (100, 110) 100 (-0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (-0.9) LineDrawer.XAxis)
     :> Nil
     )
     ++ repeat Nothing
