@@ -4,6 +4,7 @@ module LineDrawer where
 
 import Clash.Prelude
 import Debug.Trace
+import qualified Data.List as List
 
 
 -- Extends a signed integer to a signed fixpoint value
@@ -116,7 +117,7 @@ pixelIsOnLine pixel line =
 
         valid = (pointX pixel' >= pointX start') && (pointX pixel' <= pointX end')
     in
-        (abs $ (pointY pixel') - expectedY) < 2 && valid
+        (abs $ (pointY pixel') - expectedY) < 0 && valid
 
 
 
@@ -130,5 +131,38 @@ pixelIsOnLines pixel lines =
 
 
 
+-- Debug functions
+
+debugLines :: LineDrawer.Lines 10
+debugLines =
+    (  Just (LineDrawer.Line (10, 10) (30, 200) 0.5 LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (10, 14) (30, 100) (0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (10, 14) (30, 100) (-0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (25, 18) (50, 100) (-1.0) LineDrawer.XAxis)
+    :> Nil
+    )
+    ++ repeat Nothing
+
+debugLinesToStrings :: Lines 10 -> [String]
+debugLinesToStrings lines =
+    let
+        -- Bild a list of nothing representing the pixels we are going
+        -- to output
+        xDim = 80
+        yDim = 30
+
+        xFn :: Signed 10 -> Signed 10 -> Bool
+        xFn y x = pixelIsOnLines (x, y) lines
+
+        yFn :: (Signed 10) -> [Bool]
+        yFn y = fmap (xFn y) $ List.take xDim [0..]
+    in
+        List.map
+            (\x -> List.map (\a -> if a then '*' else ' ') x)
+            $ List.take yDim
+            $ List.map yFn [0..]
 
 
+debugDrawLines :: Lines 10 -> IO [()]
+debugDrawLines lines =
+    mapM putStrLn $ debugLinesToStrings lines
