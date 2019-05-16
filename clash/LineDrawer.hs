@@ -5,6 +5,7 @@ module LineDrawer where
 import Clash.Prelude
 import Debug.Trace
 import qualified Data.List as List
+import Pipeline
 
 
 -- Extends a signed integer to a signed fixpoint value
@@ -126,8 +127,42 @@ pixelIsOnLine (SwapedPoint pixel) line expectedY =
 
 
 
+type LineStageInput0 n = (Point n, Line n)
+type LineStageInput1 n = (SwapedPoint n, Line n)
+type LineStageInput2 n = (SwapedPoint n, Signed n, Line n)
 
--- pixelIsOnLinesD :: KnownNat n => Signal ()
+lineFunction :: forall d0 domain gated synchronous n.
+           ( HiddenClockReset domain gated synchronous
+           , KnownNat d0
+           , KnownNat n
+           )
+        => DSignal domain d0 (Maybe (LineStageInput0 n))
+        -> DSignal domain (d0+3) (Maybe Bool)
+lineFunction input =
+    let
+        stage0 (pixel, line) = (maybeSwapAxes line pixel, line)
+
+        stage1 (swaped, line) =
+            (swaped, line, calculateLineY line swaped)
+
+        stage2 (swaped, line, expectedY) = pixelIsOnLine swaped line expectedY
+    in
+        input |:> stage0 |:> stage1 |:> stage2
+
+
+-- pixelIsOnLinesD :: forall d0 d1 domain gated synchronous n.
+--                    ( HiddenClockReset domain gated synchronous
+--                    , KnownNat d0
+--                    , KnownNat d1
+--                    , KnownNat n
+--                    )
+--                 => DSignal domain d0 (Point n)
+--                 -> DSignal domain d0 (Lines n)
+--                 -> DSignal domain d1 Bool
+-- pixelIsOnLinesD pixel lines =
+--     let
+--     in
+--         pure True
 
 -- Check if the specified pixel is on any of the specified lines
 pixelIsOnLines :: KnownNat n  => Point n -> Lines n -> Bool
