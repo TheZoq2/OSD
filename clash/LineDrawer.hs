@@ -150,19 +150,32 @@ lineFunction input =
         input |:> stage0 |:> stage1 |:> stage2
 
 
--- pixelIsOnLinesD :: forall d0 d1 domain gated synchronous n.
---                    ( HiddenClockReset domain gated synchronous
---                    , KnownNat d0
---                    , KnownNat d1
---                    , KnownNat n
---                    )
---                 => DSignal domain d0 (Point n)
---                 -> DSignal domain d0 (Lines n)
---                 -> DSignal domain d1 Bool
--- pixelIsOnLinesD pixel lines =
---     let
---     in
---         pure True
+pixelIsOnLinesD :: forall d0 d1 domain gated synchronous n.
+                   ( HiddenClockReset domain gated synchronous
+                   , KnownNat d0
+                   , KnownNat n
+                   )
+                => DSignal domain d0 (Point n)
+                -> DSignal domain d0 (Lines n)
+                -> DSignal domain (d0+3) Bool
+pixelIsOnLinesD pixel lines =
+    let
+        individualLines = sequenceA lines
+
+        maybeJoin :: a -> Maybe b -> Maybe (a, b)
+        maybeJoin lhs Nothing = Nothing
+        maybeJoin lhs (Just rhs) = Just (lhs, rhs)
+
+        lineFnWithPixel :: DSignal domain d0 (Maybe (Line n))
+                        -> DSignal domain (d0+3) (Maybe Bool)
+        lineFnWithPixel line =
+            lineFunction $ liftA2 maybeJoin pixel line
+
+        perLine = fmap lineFnWithPixel individualLines
+
+        bools = sequenceA perLine
+    in
+        fmap (fold (||)) $ fmap (fmap (maybe False id)) bools
 
 -- Check if the specified pixel is on any of the specified lines
 pixelIsOnLines :: KnownNat n  => Point n -> Lines n -> Bool
