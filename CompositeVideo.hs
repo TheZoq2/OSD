@@ -43,8 +43,12 @@ black = 8
 
 
 
-type Output = (Unsigned 5)
 type Coordinate = (Unsigned 11)
+type PixelValue = (Unsigned 5)
+
+data Output
+    = OutputSync (Unsigned 5)
+    | Pixel (Coordinate, Cordinate)
 
 
 -- TODO: Select appropriate word lengths
@@ -138,7 +142,7 @@ horizontalLineGenerator step =
 
 -- Drawing functions
 
-drawLines :: LineDrawer.Lines 12 -> Coordinate -> Coordinate -> Output
+drawLines :: LineDrawer.Lines 12 -> Coordinate -> Coordinate -> PixelValue
 drawLines lines x y =
     let
         xCoord = (fromInteger $ toInteger x) `shiftR` 0
@@ -149,6 +153,7 @@ drawLines lines x y =
     else
         black
 
+{-
 stepPixel :: Coordinate -> Coordinate -> Output
 stepPixel x y =
     if y == 300 || y == 301 || x == 300 || x == 301 then
@@ -161,6 +166,7 @@ stepPixel x y =
     --     -- 20
     -- else
     --     white
+-}
 
 
 
@@ -170,13 +176,13 @@ stepPixel x y =
 
 -- Putting things together
 
-output :: (Coordinate -> Coordinate -> Output) -> HStep -> Coordinate ->  Output
-output pixelFunction step line =
+output :: HStep -> Coordinate -> Output
+output step line =
     case step of
-        Sync _ -> 0
-        Blank _ -> syncLevel
-        Frame pixel -> pixelFunction pixel line
-        PostFrame _ -> syncLevel
+        Sync _ -> OutputSync 0
+        Blank _ -> OutputSync syncLevel
+        Frame pixel -> Pixel (pixel, line)
+        PostFrame _ -> OutputSync syncLevel
 
 
 vsyncOutput :: VStep -> Output
@@ -235,7 +241,7 @@ fullOutput step =
         VerticalSync _ step ->
             vsyncOutput step
         Drawing line step ->
-            output (drawLines testLines) step line
+            output step line
 
 
 behaviour :: FullFrameStep -> () -> (FullFrameStep, (Output, Bit))
@@ -248,21 +254,11 @@ behaviour step input =
     in
     ((fullFrame step), (fullOutput step, debugOutput))
 
-behaviourVsync :: (Bool, VStep) -> () -> ((Bool, VStep), (Output, Bit))
-behaviourVsync (even, step) input =
-    let
-        (newEven, newState) =
-            if step /= Done then
-                (even, vsync even step)
-            else
-                (not even, PreEqualising 0 0)
-
-        isNewFrame = step == Done && even == False
-    in
-        ((newEven, newState), (vsyncOutput step, unpack $ pack $ even))
-
 
 -- component = mealy behaviourVsync (False, HalfFrame 0)
+component :: HiddenClockReset domain gated synchronous
+          => Signal domain ()
+          -> Signal domain (Output, Bit)
 component = mealy behaviour (Drawing 0 (Sync 0))
 
 {-# ANN topEntity
