@@ -3,6 +3,7 @@ module CompositeVideo where
 import Clash.Prelude
 
 import qualified LineDrawer
+import qualified DSignalUtil
 
 
 testLines :: LineDrawer.Lines 12
@@ -48,7 +49,7 @@ type PixelValue = (Unsigned 5)
 
 data Output
     = OutputSync (Unsigned 5)
-    | Pixel (Coordinate, Cordinate)
+    | Pixel (Coordinate, Coordinate)
 
 
 -- TODO: Select appropriate word lengths
@@ -185,7 +186,7 @@ output step line =
         PostFrame _ -> OutputSync syncLevel
 
 
-vsyncOutput :: VStep -> Output
+vsyncOutput :: VStep -> PixelValue
 vsyncOutput step =
     case step of
         PreEqualising _ time ->
@@ -239,7 +240,7 @@ fullOutput :: FullFrameStep -> Output
 fullOutput step =
     case step of
         VerticalSync _ step ->
-            vsyncOutput step
+            OutputSync $ vsyncOutput step
         Drawing line step ->
             output step line
 
