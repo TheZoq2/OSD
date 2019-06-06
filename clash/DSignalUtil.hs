@@ -12,11 +12,11 @@ stateMachine initial fn input =
         feedback internalFn
 
 
-mealy' :: (HiddenClockReset d g s, KnownNat n)
+mealy' :: (HiddenClockReset d g s, KnownNat n, Default b)
        => a -> (a -> (a, b)) -> DSignal d n a -> DSignal d (n+1) (a, b)
 mealy' initial fn input =
     let
         updateFn input =
-            (input, delayed (singleton initial) $ fmap (\(i, o) -> fn i) input)
+            (input, delayed (singleton (initial, def)) $ fmap (\(i, o) -> fn i) input)
     in
         feedback updateFn
