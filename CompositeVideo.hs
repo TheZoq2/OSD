@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module CompositeVideo where
 
 import Clash.Prelude
@@ -257,10 +259,36 @@ behaviour step input =
 
 
 -- component = mealy behaviourVsync (False, HalfFrame 0)
-component :: HiddenClockReset domain gated synchronous
+syncHandler :: HiddenClockReset domain gated synchronous
           => Signal domain ()
           -> Signal domain (Output, Bit)
-component = mealy behaviour (Drawing 0 (Sync 0))
+syncHandler = mealy behaviour (Drawing 0 (Sync 0))
+
+
+lineDrawer :: forall domain g s n. (HiddenClockReset domain g s)
+           => DSignal domain 0 (Output, Bit) -> DSignal domain 3 (Maybe PixelValue, Maybe Bit)
+lineDrawer input =
+    let
+        outputPixel :: DSignal domain 0 Output -> DSignal domain 3 PixelValue
+        outputPixel input =
+            let
+                coordToLinePoint :: (Coordinate, Coordinate) -> (LineDrawer.Point 12)
+                coordToLinePoint (x, y) =
+                    (x, y)
+
+                pixelFn onLine = if onLine then white else black
+                inner input = 
+                    case input of
+                        OutputSync val ->
+                            delayedI (pure val)
+                        Pixel coord ->
+                            fmap pixelFn $ LineDrawer.pixelIsOnLinesD
+                                (pure $ coordToLinePoint coord)
+                                (pure testLines)
+            in
+                fmap inner input
+    in
+        pure (Nothing, Nothing)
 
 {-# ANN topEntity
   (Synthesize
