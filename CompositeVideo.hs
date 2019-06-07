@@ -8,7 +8,7 @@ import qualified LineDrawer
 import qualified DSignalUtil
 
 
-testLines :: LineDrawer.Lines 12
+testLines :: LineDrawer.Lines 11
 testLines =
     (  Just (LineDrawer.Line (100, 100) 100 0.5 LineDrawer.XAxis)
     :> Just (LineDrawer.Line (100, 110) 100 (0.5) LineDrawer.XAxis)
@@ -265,30 +265,43 @@ syncHandler :: HiddenClockReset domain gated synchronous
 syncHandler = mealy behaviour (Drawing 0 (Sync 0))
 
 
-lineDrawer :: forall domain g s n. (HiddenClockReset domain g s)
-           => DSignal domain 0 (Output, Bit) -> DSignal domain 3 (Maybe PixelValue, Maybe Bit)
+lineDrawer :: forall domain g s. (HiddenClockReset domain g s)
+           => DSignal domain 0 (Output, Bit)
+           -> DSignal domain 3 (Maybe (PixelValue, Bit))
 lineDrawer input =
     let
-        outputPixel :: DSignal domain 0 Output -> DSignal domain 3 PixelValue
-        outputPixel input =
-            let
-                coordToLinePoint :: (Coordinate, Coordinate) -> (LineDrawer.Point 12)
-                coordToLinePoint (x, y) =
-                    (x, y)
+        coordToPoint :: (Coordinate, Coordinate) -> LineDrawer.Point 11
+        coordToPoint (x, y) = (unpack $ pack x, unpack $ pack y)
 
-                pixelFn onLine = if onLine then white else black
-                inner input = 
-                    case input of
-                        OutputSync val ->
-                            delayedI (pure val)
-                        Pixel coord ->
-                            fmap pixelFn $ LineDrawer.pixelIsOnLinesD
-                                (pure $ coordToLinePoint coord)
-                                (pure testLines)
-            in
-                fmap inner input
+        lineDrawerInput = fmap (\(state, _) -> case state of
+                          Pixel coord -> coordToPoint coord
+                          _ -> (0, 0)
+                     )
+                     input
+
+        pixelOn = LineDrawer.pixelIsOnLinesD lineDrawerInput (pure testLines)
+        pixelValue :: DSignal domain 3 (Unsigned 5)
+        pixelValue = fmap (\x -> if x then white else black) pixelOn
+
+        combiner :: Maybe (Output, Bit) -> (Unsigned 5) -> Maybe (PixelValue, Bit)
+        combiner input pixel =
+            case input of
+                Just (Pixel _, dbg) -> Just (pixel, dbg)
+                Just (OutputSync level, dbg) -> Just (level, dbg)
+                Nothing -> Nothing
     in
-        pure (Nothing, Nothing)
+        pure combiner <*> (delayedI $ fmap Just input) <*> pixelValue
+
+
+
+fullComponent :: HiddenClockReset domain gated synchronous
+          => Signal domain ()
+          -> DSignal domain 3 (Maybe (PixelValue, Bit))
+fullComponent input =
+    lineDrawer $ pure (OutputSync 0, 0)
+    -- lineDrawer $ unsafeFromSignal $ syncHandler input
+
+
 
 {-# ANN topEntity
   (Synthesize
@@ -304,6 +317,6 @@ lineDrawer input =
 topEntity :: Clock System Source
           -> Reset System Asynchronous
           -> Signal System ()
-          -> Signal System (Output, Bit)
-topEntity = exposeClockReset component
+          -> DSignal System 3 (Maybe (PixelValue, Bit))
+topEntity = exposeClockReset fullComponent
 
