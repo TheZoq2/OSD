@@ -13,7 +13,15 @@ testLines =
     (  Just (LineDrawer.Line (100, 100) 100 0.5 LineDrawer.XAxis)
     :> Just (LineDrawer.Line (100, 110) 100 (0.5) LineDrawer.XAxis)
     :> Just (LineDrawer.Line (100, 110) 100 (-0.5) LineDrawer.XAxis)
-    :> Just (LineDrawer.Line (250, 120) 150 (-0.9) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (1.0) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (0) LineDrawer.YAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (0.5) LineDrawer.YAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (-0.5) LineDrawer.YAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (-1.0) LineDrawer.YAxis)
+    :> Just (LineDrawer.Line (250, 120) 150 (1.0) LineDrawer.YAxis)
+    :> Just (LineDrawer.Line (120, 250) 150 (0.5) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (120, 250) 150 (0) LineDrawer.XAxis)
+    :> Just (LineDrawer.Line (120, 250) 150 (-0.5) LineDrawer.XAxis)
     :> Nil
     )
     ++ repeat Nothing
@@ -273,11 +281,16 @@ lineDrawer input =
         coordToPoint :: (Coordinate, Coordinate) -> LineDrawer.Point 11
         coordToPoint (x, y) = (unpack $ pack x, unpack $ pack y)
 
-        lineDrawerInput = fmap (\(state, _) -> case state of
-                          Pixel coord -> coordToPoint coord
-                          _ -> (0, 0)
-                     )
-                     input
+        coordSelector :: (Output, Bit) -> LineDrawer.Point 11
+        coordSelector (state, _) =
+            case state of
+                  Pixel coord -> coordToPoint coord
+                  _ -> (0, 0)
+
+
+        lineDrawerInput = fmap coordSelector input
+        -- lineDrawerInput = pure (0,0) -- fmap (\_ -> (0, 0)) input
+
 
         pixelOn = LineDrawer.pixelIsOnLinesD lineDrawerInput (pure testLines)
         pixelValue :: DSignal domain 3 (Unsigned 5)
@@ -298,8 +311,8 @@ fullComponent :: HiddenClockReset domain gated synchronous
           => Signal domain ()
           -> DSignal domain 3 (Maybe (PixelValue, Bit))
 fullComponent input =
-    lineDrawer $ pure (OutputSync 0, 0)
-    -- lineDrawer $ unsafeFromSignal $ syncHandler input
+    -- lineDrawer $ pure (OutputSync 0, 0)
+    lineDrawer $ unsafeFromSignal $ syncHandler input
 
 
 
@@ -309,10 +322,7 @@ fullComponent input =
     , t_inputs = [ PortName "clk"
                  , PortName "rst"
                  ]
-    , t_output = PortProduct "" 
-        [ PortName "analogValue"
-        , PortName "newFrame"
-        ]
+    , t_output = PortName "result"
     }) #-}
 topEntity :: Clock System Source
           -> Reset System Asynchronous

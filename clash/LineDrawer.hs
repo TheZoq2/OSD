@@ -51,7 +51,7 @@ pointY = snd
 
 
 
-data Axis = XAxis | YAxis
+data Axis = XAxis | YAxis deriving Show
 type Slope = SFixed 2 6
 
 {-
@@ -71,7 +71,7 @@ data Line n = Line
     -- The slope of the line as described above. -1 <= slope <= 1
     , slope :: Slope
     , axis :: Axis
-    }
+    } deriving Show
 
 -- A collection of lines that are checked in parallel. If less than the maximum
 -- amount of lines should be drawn, use `Nothing`
@@ -95,7 +95,7 @@ lineY line xCoordRelative =
         pointY (start line) + relativeY
 
 
-data SwapedPoint n = SwapedPoint (Point n)
+data SwapedPoint n = SwapedPoint (Point n) deriving Show
 
 maybeSwapAxes :: KnownNat n => Line n -> Point n -> SwapedPoint n
 maybeSwapAxes line (x, y) =
@@ -121,9 +121,9 @@ pixelIsOnLine (SwapedPoint pixel) line expectedY =
     let
         start' = start line
         end' = lengthAlongAxis line
-        valid = (pointX pixel >= pointX start') && (pointX pixel <= end')
+        valid = (pointX pixel >= pointX start') && (pointX pixel <= end' + pointX start')
     in
-        (abs $ (pointY pixel) - expectedY) < 0 && valid
+        (abs $ (pointY pixel) - expectedY) < 2 && valid
 
 
 
@@ -175,7 +175,7 @@ pixelIsOnLinesD pixel lines =
 
         bools = sequenceA perLine
     in
-        fmap (fold (||)) $ fmap (fmap (maybe False id)) bools
+        fmap (foldl1 (||)) $ fmap (fmap (maybe False id)) bools
 
 -- Check if the specified pixel is on any of the specified lines
 pixelIsOnLines :: KnownNat n  => Point n -> Lines n -> Bool

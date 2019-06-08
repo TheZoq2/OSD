@@ -30,13 +30,13 @@ module top (
     // assign PIN_13 = 1;
 
 
+    wire valid;
     wire[4:0] videoSignal;
 
     frameTracker ft
         ( .clk(CLK)
         , .rst(rst)
-        , .analogValue(videoSignal)
-        , .newFrame(PIN_13)
+        , .result({valid, videoSignal, PIN_13})
         );
 
 
